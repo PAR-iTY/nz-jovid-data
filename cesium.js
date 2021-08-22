@@ -29,7 +29,7 @@ const init = async () => {
     stroke: Cesium.Color.BLACK,
     fill: Cesium.Color.BLACK,
     strokeWidth: 3,
-    markerSymbol: 'L'
+    markerSymbol: 'C'
   });
   viewer.dataSources.add(locations);
 

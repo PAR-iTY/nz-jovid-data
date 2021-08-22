@@ -1,5 +1,5 @@
 # nz-jovid-data
 
-covid vs jovid
+jocations-of-interest
 
 https://par-ity.github.io/nz-jovid-data/
