@@ -3,7 +3,7 @@ window.addEventListener('DOMContentLoaded', e => {
   init();
 });
 
-const init = async () => {
+const init = () => {
   Cesium.Ion.defaultAccessToken =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwZDlkMzEwYi1mZjFiLTRmYzctOWQ4ZS05ZjM0MGIxNzZiMTQiLCJpZCI6NjQ4MzEsImlhdCI6MTYyOTYyMzQ5Mn0.xoj4jK-_X1HohjWg8rCYH9WPlYqoZJc7lkFKn9rtaXw';
 
@@ -24,18 +24,20 @@ const init = async () => {
   const locationsURL =
     'https://raw.githubusercontent.com/minhealthnz/nz-covid-data/main/locations-of-interest/august-2021/locations-of-interest.geojson';
 
-  var locations = Cesium.GeoJsonDataSource.load(locationsURL, {
+  const locations = Cesium.GeoJsonDataSource.load(locationsURL, {
+    clampToGround: true,
     markerColor: Cesium.Color.YELLOW,
     stroke: Cesium.Color.BLACK,
     fill: Cesium.Color.BLACK,
     strokeWidth: 3,
-    markerSymbol: 'C'
+    markerSymbol: '☢'
   });
   viewer.dataSources.add(locations);
 
-  var jocations = Cesium.GeoJsonDataSource.load(
+  const jocations = Cesium.GeoJsonDataSource.load(
     './assets/geojson/jocations-of-interest.geojson',
     {
+      clampToGround: true,
       markerColor: Cesium.Color.INDIGO,
       stroke: Cesium.Color.WHITE,
       fill: Cesium.Color.GOLD,
