@@ -47,7 +47,20 @@ const init = () => {
   );
   viewer.dataSources.add(jocations);
 
-  viewer.zoomTo(jocations);
+  // viewer.zoomTo(jocations);
+
+  // generic akl coordinates:
+  // -36.879044, 174.748075
+
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(174.641911, -36.949, 4000.0),
+    orientation: {
+      heading: Cesium.Math.toRadians(20.0),
+      pitch: Cesium.Math.toRadians(-30.0),
+      roll: 0.0
+    },
+    duration: 3.0
+  });
 };
 
 // ------------------------------------------------------------------- //
