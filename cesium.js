@@ -69,6 +69,28 @@ const init = () => {
 //   '2020-09-01T16:23:19.06128571429871954Z'
 // );
 
+// viewer.camera.flyTo({
+//   destination: Cesium.Cartesian3.fromDegrees(174.7, -36.8, 1000),
+//   // new Cesium.Cartesian3(
+//   //   -2710360.373185721,
+//   //   -4268331.772567541,
+//   //   3875541.0654406464
+//   // ),
+//   orientation: {
+//     direction: new Cesium.Cartesian3(
+//       0.17835634433098377,
+//       0.8113876602784172,
+//       0.5566319063661401
+//     ),
+//     up: new Cesium.Cartesian3(
+//       -0.39107298319485395,
+//       -0.46064901978847217,
+//       0.7967837864709582
+//     )
+//   },
+//   duration: 0
+// });
+
 // attempt to get geojson {l/j}ocations into cesium
 // https://cesium.com/learn/cesiumjs/ref-doc/GeoJsonDataSource.html?classFilter=json
 
