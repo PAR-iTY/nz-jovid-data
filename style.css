@@ -6,17 +6,20 @@ body {
   max-height: 100vh;
 }
 
-.chart-container {
-  position: relative;
-  height: 50%;
-  width: 100%;
+#cesiumContainer {
+  height: 70vh;
+  /* max-width: 1280px;
+  margin: 0 auto; */
 }
 
-/* #chart {
-  background: rgba(255, 231, 247, 0.6);
-} */
+.chart-container {
+  /* relative positioning required for responsive: true chart */
+  position: relative;
+  height: 30vh;
+  max-width: 1280px;
+  margin: 0 auto;
+}
 
-/* #cesiumContainer {
-  width: 500px;
-  height: 500px;
-} */
+#chart {
+  /* background: rgba(255, 231, 247, 0.6); */
+}

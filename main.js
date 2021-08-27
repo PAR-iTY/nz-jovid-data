@@ -10,8 +10,20 @@ window.addEventListener('DOMContentLoaded', async e => {
   const locations = await fetchJSON(locationsURL);
 
   initTable(locations);
-  // initMap(locations);
+  initMap(locations);
 });
+
+// ------------------------------------------------------------------- //
+
+// async does not encapsulate promise --> call using await
+const fetchJSON = async url => {
+  try {
+    const res = await fetch(url);
+    return res.json();
+  } catch (error) {
+    console.error(error);
+  }
+};
 
 // ------------------------------------------------------------------- //
 
@@ -27,15 +39,37 @@ const initTable = data => {
     return accObj;
   }, {});
 
-  console.log('cityData: ', cityData);
+  console.log('cityData:', cityData);
+
+  // filter data for significant number of locations
+  // would be cool to do by time-relevance but hey cbf rn
+  // would obviously be good to do in 1-pass reduce, buuuut
+  // would then lose advantage of that accObj containing
+  // a clean and full reference set of data attributes that
+  // i care about in useful formats for chartjs
+  const sigCityData = Object.fromEntries(
+    Object.entries(cityData)
+      .filter(([key, value]) => value >= 5)
+      .sort()
+  );
+
+  console.log('sigCityData:', sigCityData);
 
   const chartData = {
     // grouped: true,
     label: 'Locations',
-    data: Object.values(cityData),
-    backgroundColor: 'rgba(180, 99, 132, 0.6)',
+    data: Object.values(sigCityData),
+    backgroundColor: [
+      'rgba(210, 99, 132, 0.6)',
+      'rgba(180, 99, 132, 0.6)',
+      'rgba(150, 99, 132, 0.6)'
+    ],
 
-    borderColor: 'rgba(180, 99, 132, 1)',
+    borderColor: [
+      'rgba(210, 99, 132, 1)',
+      'rgba(180, 99, 132, 1)',
+      'rgba(150, 99, 132, 1)'
+    ],
 
     borderWidth: 2,
     hoverBorderWidth: 0
@@ -43,6 +77,7 @@ const initTable = data => {
 
   const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     indexAxis: 'y',
     legend: {
       display: false
@@ -54,13 +89,13 @@ const initTable = data => {
       }
     },
     scales: {
-      x: {
-        min: 5
-      },
+      // x: {
+      //   min: 5 // only hides data, doesnt remove bar-label or shrink size of chart
+      // },
       yAxes: [
         {
-          // beginAtZero: true,
-          barPercentage: 0.5
+          beginAtZero: true
+          // barPercentage: 0.5
         }
       ]
     },
@@ -77,7 +112,7 @@ const initTable = data => {
     type: 'bar',
     // grouped: true,
     data: {
-      labels: Object.keys(cityData),
+      labels: Object.keys(sigCityData),
       datasets: [chartData]
     },
     options: chartOptions
@@ -129,23 +164,14 @@ const initMap = data => {
   viewer.dataSources.add(jocations);
 
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(174.641911, -36.949, 4000.0),
+    destination: Cesium.Cartesian3.fromDegrees(174.641911, -36.949, 15000.0),
     orientation: {
       heading: Cesium.Math.toRadians(20.0),
-      pitch: Cesium.Math.toRadians(-30.0),
+      pitch: Cesium.Math.toRadians(-50.0),
       roll: 0.0
     },
     duration: 3.0
   });
 };
-
-// ------------------------------------------------------------------- //
-
-// call using await
-const fetchJSON = url =>
-  fetch(url)
-    .then(res => res.json())
-    .then(json => json)
-    .catch(error => console.error(error));
 
 // ------------------------------------------------------------------- //
