@@ -5,19 +5,24 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+    <!-- CHART JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.5.1/dist/chart.min.js"></script>
     <!-- CESIUM JS -->
-    <script src="https://cesium.com/downloads/cesiumjs/releases/1.84/Build/Cesium/Cesium.js"></script>
+    <!-- <script src="https://cesium.com/downloads/cesiumjs/releases/1.84/Build/Cesium/Cesium.js"></script>
     <link
       href="https://cesium.com/downloads/cesiumjs/releases/1.84/Build/Cesium/Widgets/widgets.css"
       rel="stylesheet"
-    />
-    <script defer src="cesium.js"></script>
+    /> -->
     <!-- CUSTOMISATIONS -->
+    <script defer src="main.js"></script>
     <link href="style.css" rel="stylesheet" />
     <title>jocations-of-interest</title>
   </head>
 
   <body>
-    <div id="cesiumContainer"></div>
+    <div class="chart-container">
+      <canvas id="chart"></canvas>
+    </div>
+    <!-- <div id="cesiumContainer"></div> -->
   </body>
 </html>
