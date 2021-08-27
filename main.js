@@ -28,7 +28,7 @@ const fetchJSON = async url => {
 // ------------------------------------------------------------------- //
 
 const initTable = data => {
-  // use reduce to do all data transformation in one pass (!)
+  // use reduce to new object to do all data transformation in one pass (!)
   const cityData = data.features.reduce((accObj, feature) => {
     Object.keys(feature.properties).forEach(key => {
       if (key && key === 'City') {
@@ -40,6 +40,9 @@ const initTable = data => {
   }, {});
 
   console.log('cityData:', cityData);
+
+  const nullCity = data.features.filter(feature => !feature.properties.City);
+  console.log('nullCity: ', nullCity);
 
   // filter data for significant number of locations
   // would be cool to do by time-relevance but hey cbf rn
