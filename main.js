@@ -4,6 +4,8 @@
 // this is a good mini-test for async modular loading
 // good for general perf and also component-based web design
 window.addEventListener('DOMContentLoaded', async e => {
+  console.log('DOMContentLoaded:', e.timeStamp);
+
   const locationsURL =
     'https://raw.githubusercontent.com/minhealthnz/nz-covid-data/main/locations-of-interest/august-2021/locations-of-interest.geojson';
 
@@ -30,7 +32,20 @@ const fetchJSON = async url => {
 const initTable = data => {
   // use reduce to new object to do all data transformation in one pass (!)
   const cityData = data.features.reduce((accObj, feature) => {
+    // loop over feature properties by key
     Object.keys(feature.properties).forEach(key => {
+      // detect missing values
+      if (key !== 'Added' && !feature.properties[key]) {
+        console.warn(
+          'feature has a non-trivial missing value:',
+          feature.properties
+        );
+      }
+
+      // accumulate/count features by city
+      // initialise to 0 when accumulator starts
+      // use property key to match city
+      // and to assign city name as accObj key
       if (key && key === 'City') {
         accObj[feature.properties[key]] =
           (accObj[feature.properties[key]] || 0) + 1;
@@ -41,8 +56,8 @@ const initTable = data => {
 
   console.log('cityData:', cityData);
 
-  const nullCity = data.features.filter(feature => !feature.properties.City);
-  console.log('nullCity: ', nullCity);
+  // const nullCity = data.features.filter(feature => !feature.properties.City);
+  // console.log('nullCity: ', nullCity);
 
   // filter data for significant number of locations
   // would be cool to do by time-relevance but hey cbf rn
@@ -88,7 +103,7 @@ const initTable = data => {
     plugins: {
       title: {
         display: true,
-        text: 'NZ Covid-19 Augest 2021 Locations of interest by city'
+        text: 'NZ Covid-19 August 2021: Locations of interest by city'
       }
     },
     scales: {
