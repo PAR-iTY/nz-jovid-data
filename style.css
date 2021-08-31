@@ -13,13 +13,11 @@ body {
 }
 
 .chart-container {
-  /* relative positioning required for responsive: true chart */
+  /* container with relative positioning required for {responsive: true} chart option */
   position: relative;
   height: 30vh;
   max-width: 1280px;
   margin: 0 auto;
 }
 
-#chart {
-  /* background: rgba(255, 231, 247, 0.6); */
-}
+/* #chart {} */
