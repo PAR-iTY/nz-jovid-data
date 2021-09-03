@@ -14,6 +14,7 @@
 // goal: lazy/async load both map and table
 // this is a good mini-test for async modular loading
 // good for general perf and also component-based web design
+// note: Cesium calls are often async, and could be managed/optimised
 window.addEventListener('DOMContentLoaded', async e => {
   // console.log('DOMContentLoaded:', Math.(e.timeStamp / 1000));
   console.log(
@@ -25,7 +26,10 @@ window.addEventListener('DOMContentLoaded', async e => {
   const locationsURL =
     'https://raw.githubusercontent.com/minhealthnz/nz-covid-data/main/locations-of-interest/august-2021/locations-of-interest.geojson';
 
-  const locations = await fetchJSON(locationsURL);
+  // purely for local conviencience and i guess less api hits + speed
+  const localURL = './reference-locations.geojson';
+
+  const locations = await fetchJSON(localURL);
 
   initChart(locations);
   initMap(locations);
@@ -47,57 +51,41 @@ const fetchJSON = async url => {
 
 const getDate = value => {
   // convert to MM/DD/YYYY format for new Date(input)
-  const dateStr = `${value[3]}${value[4]}/${value[0]}${
-    value[1]
-  }/${value.substring(6, 10)}`;
+  // use strict mode to not render invalid dates silently
+  let m = moment(value, 'DD-MM-YYYY, h:mm a');
 
-  // console.log('dateStr:', dateStr);
-  return new Date(dateStr);
-  // console.log(dateObj.toLocaleDateString());
+  // verify input formatting is valid (am i missing locale/zone info??)
+  if (m.format('DD-MM-YYYY, h:mm a') !== value.replaceAll('/', '-')) {
+    // console.log('\nm: ', m.format('DD-MM-YYYY, h:mm a'));
+    // console.log('o: ', value.replaceAll('/', '-'));
 
-  // prettify date for display to users
-  // const date = value.substring(0, 10);
-  // const time = value.substring(12);
-  // console.log('date: ', date);
-  // console.log('time: ', time);
-  // return [date, time];
+    console.error('[moment.js date formatting error] input value:', value);
+    return Error('[moment.js date formatting error] input value:', value);
+  } else {
+    return m.unix();
+  }
 };
+
+// ------------------------------------------------------------------- //
+
+// uses bitwise operation to determine if int is odd or not
+const isOdd = n =>
+  n && n === parseInt(n, 10)
+    ? n & 1
+      ? true
+      : false
+    : Error('input value must be a non-zero integer');
+
+// ------------------------------------------------------------------- //
+
+const diff = (a, b) => (a > b ? a - b : b - a);
+
+// ------------------------------------------------------------------- //
 
 // what else to do with the data...
 // i could create a sequence starting from the first recorded location to the last!
 
 const initChart = data => {
-  const seqData = data.features
-    .map(feature => {
-      const { Start, End, id } = feature.properties;
-      // console.log('start:', getDate(Start));
-      const x = { Start, End, id };
-      return x;
-    })
-    .sort((a, b) => getDate(a.Start) - getDate(b.Start));
-
-  // ^ needs to be more complex to link the trail of locations
-  // must detect: first starting location's end time
-  //              next starting location's start time
-
-  // so this needs to do a look-ahead?
-
-  // i can make a crude assumption: it matters less what the end time is
-  // because the data shows when (someone) was at a location, and i will
-  // show the relationship between that contagious event and the next.
-
-  // because this data does not identify citizens (thank Wanye @ Stats)
-  // i should not pretend that the sequence is linear.
-  // every start time event should be linked with a line to every soon
-  // after event (give a param of 3 hours [or a day, depends on data])
-
-  // strongest lines should be ranked by a few criteria:
-  // how close geographically they are
-  // how closely in start times they are
-  // how close the firsts end time is to the nexts start time
-
-  console.log('seqData: ', seqData);
-
   // use reduce to new object to do data transformation and aggregation in one pass
   const cityData = data.features.reduce((accObj, feature) => {
     // outside the entries loop, can I aggregate data in a different way??
@@ -116,7 +104,12 @@ const initChart = data => {
         );
       }
 
-      // [rest of code moved to getDate]
+      // [HERE] fork off work to other functions if required because:
+      // this is the best place to collect feature props key & value
+
+      // instead of map above,
+
+      // [rest of code moved to getDate()]
       // add date data to accumulator object
       // accObj[date] = (accObj[date] || 0) + 1;
       // }
@@ -145,9 +138,8 @@ const initChart = data => {
   // a clean and full reference set of data attributes that
   // i care about in useful formats for chartjs
   const sigCityData = Object.fromEntries(
-    Object.entries(cityData)
-      .filter(([key, value]) => value >= 5)
-      .sort()
+    Object.entries(cityData).filter(([key, value]) => value >= 5)
+    // .sort((a, b) => a - b) // doesnt do anything
   );
 
   console.log('sigCityData:', sigCityData);
@@ -218,26 +210,33 @@ const initChart = data => {
 
 // ------------------------------------------------------------------- //
 
-const initMap = data => {
+// Cesium CDN provides immediate access to a Cesium global
+const initMap = async data => {
   Cesium.Ion.defaultAccessToken =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIwZDlkMzEwYi1mZjFiLTRmYzctOWQ4ZS05ZjM0MGIxNzZiMTQiLCJpZCI6NjQ4MzEsImlhdCI6MTYyOTYyMzQ5Mn0.xoj4jK-_X1HohjWg8rCYH9WPlYqoZJc7lkFKn9rtaXw';
 
   const viewer = new Cesium.Viewer('cesiumContainer', {
     requestRenderMode: true,
     maximumRenderTimeChange: Infinity,
+    allowDataSourcesToSuspendAnimation: true,
     timeline: false,
     animation: false,
+    shadows: true,
     baseLayerPicker: false,
     sceneModePicker: false,
     terrainProvider: Cesium.createWorldTerrain(),
     imageryProvider: Cesium.createWorldImagery()
   });
+
+  // for debug only
+  viewer.scene.debugShowFramesPerSecond = true;
+
   viewer.scene.primitives.add(Cesium.createOsmBuildings());
 
   viewer.scene.globe.depthTestAgainstTerrain = true;
 
   // load input data from function param
-  const locations = Cesium.GeoJsonDataSource.load(data, {
+  const locations = await Cesium.GeoJsonDataSource.load(data, {
     clampToGround: true,
     markerColor: Cesium.Color.YELLOW,
     stroke: Cesium.Color.BLACK,
@@ -246,7 +245,7 @@ const initMap = data => {
     markerSymbol: 'C' // ☢
   });
 
-  const jocations = Cesium.GeoJsonDataSource.load(
+  const jocations = await Cesium.GeoJsonDataSource.load(
     './assets/geojson/jocations-of-interest.geojson',
     {
       clampToGround: true,
@@ -261,6 +260,34 @@ const initMap = data => {
   viewer.dataSources.add(jocations);
   viewer.dataSources.add(locations);
 
+  // console.log('locations: ', locations.entities.values);
+
+  // const pipeLog = x => {
+  //   console.log('[pipe-log]:', x);
+  //   return x;
+  // };
+
+  // use more fancy ES6+
+  const degreesArray = data.features
+    .map(feature => {
+      const { Start, End } = feature.properties;
+      const [Long, Lat] = feature.geometry.coordinates;
+      return { Start, End, Lat, Long };
+    })
+    .sort((a, b) => getDate(a.Start) - getDate(b.Start))
+    .flatMap(feature => [feature.Long, feature.Lat]);
+
+  console.log('degreesArray:', degreesArray);
+
+  viewer.entities.add({
+    polyline: {
+      positions: Cesium.Cartesian3.fromDegreesArray(degreesArray),
+      width: 4.0,
+      material: Cesium.Color.ORANGE,
+      clampToGround: true
+    }
+  });
+
   viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(174.641911, -36.949, 15000.0),
     orientation: {
@@ -270,6 +297,55 @@ const initMap = data => {
     },
     duration: 3.0
   });
+
+  // lazy way of surfacing current POV positions to feed to flyTo
+  // setInterval(() => {
+  //   console.dir(viewer.scene.camera.position);
+  // }, 3000);
+
+  // add these to flyTo
+  // x: -5090447.751044754;
+  // y: 450921.7119908405;
+  // z: -3806530.1980104563;
 };
 
 // ------------------------------------------------------------------- //
+
+// const x = degreesArray.reduce((accObj, feature) => {
+// accObj. = (accObj.latDiff || feature);
+// accObj.longDiff = (accObj.longDiff || feature);
+
+// if (isOdd(index)) {
+//   // latitudes
+//   if (index >= 2) {
+//     // can compare back 2 places
+//     if (diff(value, array[index - 2]) > 0.3) {
+//       console.log('lat diff:', diff(value, array[index - 2]));
+//     }
+//   }
+// } else {
+//   // longitudes
+// }
+// }, {});
+
+// console.log('x: ', x);
+
+// ^ needs to be more complex to link the trail of locations
+// must detect: first starting location's end time
+//              next starting location's start time
+
+// so this needs to do a look-ahead?
+
+// i can make a crude assumption: it matters less what the end time is
+// because the data shows when (someone) was at a location, and i will
+// show the relationship between that contagious event and the next.
+
+// because this data does not identify citizens (thank Wanye @ Stats)
+// i should not pretend that the sequence is linear.
+// every start time event should be linked with a line to every soon
+// after event (give a param of 3 hours [or a day, depends on data])
+
+// strongest lines should be ranked by a few criteria:
+// how close geographically they are
+// how closely in start times they are
+// how close the firsts end time is to the nexts start time
