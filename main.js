@@ -1,84 +1,31 @@
 // ------------------------------------------------------------------- //
 
+// before i do any of this add more timer code to console logger
+// so i know what im doing is doing anything at all (sneaky JIT)
+
 /*
  * todo:
  *  - improve reduce accObj so it collects more information per city
  *  - seperate data-cleaning functionality from chart functionality
  *  - and/or develop a new data structure e.g. for time-series line chart
- *  - babel this script for compatability - improve async/lazyness
+ *  - babel this script for compatability
  *  - improve UX - site title/heading, explain covid-chart & jovid-map
+ *  - functionalise data congestion and distrobution to chart/map funcs
+ *  - lazy/async load both map and table (Cesium is async by default)
+ *  -
  */
 
-// ------------------------------------------------------------------- //
+// ASYNC
 
-// goal: lazy/async load both map and table
-// this is a good mini-test for async modular loading
-// good for general perf and also component-based web design
+// if the whole project were largely async the perf may increase
+// regardless it enables defer/await/parallel modes of loading
+// which benefits modularity and low-power/connectivity devices
 // note: Cesium calls are often async, and could be managed/optimised
-window.addEventListener('DOMContentLoaded', async e => {
-  // console.log('DOMContentLoaded:', Math.(e.timeStamp / 1000));
-  console.log(
-    `DOMContentLoaded in ${
-      Math.round((e.timeStamp + Number.EPSILON * 100) / 100) / 1000
-    } seconds`
-  );
 
-  const locationsURL =
-    'https://raw.githubusercontent.com/minhealthnz/nz-covid-data/main/locations-of-interest/august-2021/locations-of-interest.geojson';
-
-  // purely for local conviencience and i guess less api hits + speed
-  const localURL = './reference-locations.geojson';
-
-  const locations = await fetchJSON(localURL);
-
-  initChart(locations);
-  initMap(locations);
-});
-
-// ------------------------------------------------------------------- //
-
-// async does not encapsulate promise --> call using await
-const fetchJSON = async url => {
-  try {
-    const res = await fetch(url);
-    return res.json();
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-// ------------------------------------------------------------------- //
-
-const getDate = value => {
-  // convert to MM/DD/YYYY format for new Date(input)
-  // use strict mode to not render invalid dates silently
-  let m = moment(value, 'DD-MM-YYYY, h:mm a');
-
-  // verify input formatting is valid (am i missing locale/zone info??)
-  if (m.format('DD-MM-YYYY, h:mm a') !== value.replaceAll('/', '-')) {
-    // console.log('\nm: ', m.format('DD-MM-YYYY, h:mm a'));
-    // console.log('o: ', value.replaceAll('/', '-'));
-
-    console.error('[moment.js date formatting error] input value:', value);
-    return Error('[moment.js date formatting error] input value:', value);
-  } else {
-    return m.unix();
-  }
-};
-
-// ------------------------------------------------------------------- //
-
-// uses bitwise operation to determine if int is odd or not
-const isOdd = n =>
-  n && n === parseInt(n, 10)
-    ? n & 1
-      ? true
-      : false
-    : Error('input value must be a non-zero integer');
-
-// ------------------------------------------------------------------- //
-
-const diff = (a, b) => (a > b ? a - b : b - a);
+// ...does this mean if instead of doing my work within initMap...
+// i seperate out work into functions and be careful to avoid await
+// i convert my functions to returning promises of data and feed
+// these promises to Cesum / viewer etc calls??
 
 // ------------------------------------------------------------------- //
 
@@ -97,7 +44,7 @@ const initChart = data => {
     // loop over feature properties
     for (const [key, value] of Object.entries(feature.properties)) {
       // detect missing values
-      if (key !== 'Added' && !value) {
+      if (!value && key !== 'Added') {
         console.warn(
           'feature has a non-trivial missing value:',
           feature.properties
@@ -108,7 +55,6 @@ const initChart = data => {
       // this is the best place to collect feature props key & value
 
       // instead of map above,
-
       // [rest of code moved to getDate()]
       // add date data to accumulator object
       // accObj[date] = (accObj[date] || 0) + 1;
@@ -118,7 +64,7 @@ const initChart = data => {
       // initialise to 0 when accumulator starts
       // use property key to match city
       // use value (city name) as accObj key
-      if (key && key === 'City') {
+      if (key === 'City' && value) {
         // add city value to accumulator object
         accObj[value] = (accObj[value] || 0) + 1;
       }
@@ -126,7 +72,7 @@ const initChart = data => {
     return accObj;
   }, {});
 
-  console.log('cityData:', cityData);
+  // console.log('cityData:', cityData);
 
   // const nullCity = data.features.filter(feature => !feature.properties.City);
   // console.log('nullCity: ', nullCity);
@@ -142,12 +88,12 @@ const initChart = data => {
     // .sort((a, b) => a - b) // doesnt do anything
   );
 
-  console.log('sigCityData:', sigCityData);
+  // console.log('sigCityData:', sigCityData);
 
   const chartData = {
     // grouped: true,
     label: 'Locations',
-    data: Object.values(sigCityData),
+    data: Object.values(cityData),
     backgroundColor: [
       'rgba(210, 99, 132, 0.6)',
       'rgba(180, 99, 132, 0.6)',
@@ -178,9 +124,6 @@ const initChart = data => {
       }
     },
     scales: {
-      // x: {
-      //   min: 5 // only hides data, doesnt remove bar-label or shrink size of chart
-      // },
       yAxes: [
         {
           beginAtZero: true
@@ -201,7 +144,7 @@ const initChart = data => {
     type: 'bar',
     // grouped: true,
     data: {
-      labels: Object.keys(sigCityData),
+      labels: Object.keys(cityData),
       datasets: [chartData]
     },
     options: chartOptions
@@ -236,7 +179,7 @@ const initMap = async data => {
   viewer.scene.globe.depthTestAgainstTerrain = true;
 
   // load input data from function param
-  const locations = await Cesium.GeoJsonDataSource.load(data, {
+  const locations = Cesium.GeoJsonDataSource.load(data, {
     clampToGround: true,
     markerColor: Cesium.Color.YELLOW,
     stroke: Cesium.Color.BLACK,
@@ -245,7 +188,7 @@ const initMap = async data => {
     markerSymbol: 'C' // ☢
   });
 
-  const jocations = await Cesium.GeoJsonDataSource.load(
+  const jocations = Cesium.GeoJsonDataSource.load(
     './assets/geojson/jocations-of-interest.geojson',
     {
       clampToGround: true,
@@ -262,20 +205,21 @@ const initMap = async data => {
 
   // console.log('locations: ', locations.entities.values);
 
-  // const pipeLog = x => {
-  //   console.log('[pipe-log]:', x);
-  //   return x;
-  // };
+  // map can't access look-ahead value, sort cant remove values
+  // filter cant return modified values or look ahead
 
   // use more fancy ES6+
   const degreesArray = data.features
     .map(feature => {
       const { Start, End } = feature.properties;
-      const [Long, Lat] = feature.geometry.coordinates;
-      return { Start, End, Lat, Long };
+      const coords = feature.geometry.coordinates;
+      return { Start, coords };
+      // const [Long, Lat] = feature.geometry.coordinates;
+      // return { Start, End, Lat, Long };
     })
-    .sort((a, b) => getDate(a.Start) - getDate(b.Start))
-    .flatMap(feature => [feature.Long, feature.Lat]);
+    .sort((a, b) => getDate(a.Start).unix() - getDate(b.Start).unix())
+    .flatMap(feature => feature.coords);
+  // .flatMap(feature => [feature.Long, feature.Lat]);
 
   console.log('degreesArray:', degreesArray);
 
@@ -309,6 +253,113 @@ const initMap = async data => {
   // z: -3806530.1980104563;
 };
 
+// ------------------------------------------------------------------- //
+
+// async does not encapsulate promise --> call using await
+// does awaiting res.methods() do anything? is there any way to fully
+// encapsulate async within fetch functions
+// (i.e. not have to await the fetch function call in parent scope too)
+const fetchJSON = async url => {
+  try {
+    const res = await fetch(url);
+    const json = await res.json();
+    return json;
+  } catch (error) {
+    console.error(error);
+  }
+};
+// ------------------------------------------------------------------- //
+
+const fetchCSV = async url => {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'content-type': 'text/csv;charset=UTF-8'
+      }
+    });
+    const text = await res.text();
+    return text;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+// ------------------------------------------------------------------- //
+
+// uses bitwise operation to determine if int is odd or not
+const isOdd = n =>
+  n && n === parseInt(n, 10)
+    ? n & 1
+      ? true
+      : false
+    : Error('input value must be a non-zero integer');
+
+// ------------------------------------------------------------------- //
+
+const diff = (a, b) => (a > b ? a - b : b - a);
+
+// ------------------------------------------------------------------- //
+
+// generic attribute-dropper for array of objects (API, JSON-type data)
+// challenge: how to predict number of dropped attributes (args/.length?)
+// and how to replicate that into the map params...
+const dropAttrs = objArray =>
+  objArray.map(({ dropAttr1, dropAttr2, ...keepAttrs }) => keepAttrs);
+
+// ------------------------------------------------------------------- //
+
+// expects a string input value in NZ 12 hour format
+// known format (for now) but could parameterise
+// return moment object for versatility
+const getDate = value => {
+  // convert to MM/DD/YYYY format for new Date(input)
+  // use strict mode is rendering invalid dates... turned off for now
+  // is it being tripped by missing locale/zone info?
+  let m = moment(value, 'DD-MM-YYYY, h:mm a');
+
+  // verify input formatting is valid
+  // should this catch any mistakes? or is it just a mirror-compare?
+  if (m.format('DD/MM/YYYY, h:mm a') !== value) {
+    console.error('[moment.js date formatting error] input value:', value);
+    return Error('[moment.js date formatting error] input value:', value);
+  } else {
+    return m;
+  }
+};
+
+// ------------------------------------------------------------------- //
+
+window.addEventListener('DOMContentLoaded', async e => {
+  console.log(
+    `DOMContentLoaded in ${
+      Math.round((e.timeStamp + Number.EPSILON * 100) / 100) / 1000
+    } seconds`
+  );
+
+  // fetch live data
+  // const locationsURL =
+  //   'https://raw.githubusercontent.com/minhealthnz/nz-covid-data/main/locations-of-interest/august-2021/locations-of-interest.geojson';
+
+  // [dev] purely for local conviencience and i guess less api hits + speed
+  const locationsURL = './assets/temp/reference-locations.geojson';
+
+  // const locations = await fetchJSON(locationsURL);
+
+  // phone csv data test
+  // apparently chart.js plugin might be the way to go
+  // or some other csv parser
+  // (cbf with string-wrangling + would fuck up edge cases)
+  const phonesURL = './assets/temp/phones.csv';
+  const phones = await fetchCSV(phonesURL);
+  console.log('phones:', phones);
+
+  // initChart(locations);
+  // initMap(locations);
+  // functionalise data congestion and distrobution to chart/map funcs
+});
+
+// ------------------------------------------------------------------- //
+// ------------------------------------------------------------------- //
 // ------------------------------------------------------------------- //
 
 // const x = degreesArray.reduce((accObj, feature) => {
