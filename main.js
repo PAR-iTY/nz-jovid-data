@@ -44,7 +44,7 @@ const initChart = data => {
     // loop over feature properties
     for (const [key, value] of Object.entries(feature.properties)) {
       // detect missing values
-      if (!value && key !== 'Added') {
+      if (!value && key !== 'Added' && key !== 'Updated') {
         console.warn(
           'feature has a non-trivial missing value:',
           feature.properties
@@ -120,7 +120,7 @@ const initChart = data => {
     plugins: {
       title: {
         display: true,
-        text: 'NZ Covid-19 August 2021: Locations of interest by city'
+        text: 'NZ Covid-19 August 2021 Event: Locations of interest by city'
       }
     },
     scales: {
@@ -221,7 +221,7 @@ const initMap = async data => {
     .flatMap(feature => feature.coords);
   // .flatMap(feature => [feature.Long, feature.Lat]);
 
-  console.log('degreesArray:', degreesArray);
+  // console.log('degreesArray:', degreesArray);
 
   viewer.entities.add({
     polyline: {
@@ -233,7 +233,13 @@ const initMap = async data => {
   });
 
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(174.641911, -36.949, 15000.0),
+    // nz overview cartesian3
+    destination: {
+      x: -4698915.996064182,
+      y: 729761.6783985238,
+      z: -4854454.356029411
+    },
+
     orientation: {
       heading: Cesium.Math.toRadians(20.0),
       pitch: Cesium.Math.toRadians(-50.0),
@@ -247,7 +253,9 @@ const initMap = async data => {
   //   console.dir(viewer.scene.camera.position);
   // }, 3000);
 
-  // add these to flyTo
+  // Cesium.Cartesian3.fromDegrees(174.641911, -36.949, 15000.0),
+
+  // add cartesian to flyTo directly
   // x: -5090447.751044754;
   // y: 450921.7119908405;
   // z: -3806530.1980104563;
@@ -315,12 +323,14 @@ const getDate = value => {
   // convert to MM/DD/YYYY format for new Date(input)
   // use strict mode is rendering invalid dates... turned off for now
   // is it being tripped by missing locale/zone info?
-  let m = moment(value, 'DD-MM-YYYY, h:mm a');
+  let m = moment(value, 'D-M-YYYY, h:mm a');
 
   // verify input formatting is valid
   // should this catch any mistakes? or is it just a mirror-compare?
-  if (m.format('DD/MM/YYYY, h:mm a') !== value) {
+  console.log(value);
+  if (m.format('D/M/YYYY, h:mm a') !== value) {
     console.error('[moment.js date formatting error] input value:', value);
+
     return Error('[moment.js date formatting error] input value:', value);
   } else {
     return m;
@@ -337,24 +347,24 @@ window.addEventListener('DOMContentLoaded', async e => {
   );
 
   // fetch live data
-  // const locationsURL =
-  //   'https://raw.githubusercontent.com/minhealthnz/nz-covid-data/main/locations-of-interest/august-2021/locations-of-interest.geojson';
+  const locationsURL =
+    'https://raw.githubusercontent.com/minhealthnz/nz-covid-data/main/locations-of-interest/august-2021/locations-of-interest.geojson';
 
   // [dev] purely for local conviencience and i guess less api hits + speed
-  const locationsURL = './assets/temp/reference-locations.geojson';
+  // const locationsURL = './assets/temp/reference-locations.geojson';
 
-  // const locations = await fetchJSON(locationsURL);
+  const locations = await fetchJSON(locationsURL);
 
   // phone csv data test
   // apparently chart.js plugin might be the way to go
   // or some other csv parser
   // (cbf with string-wrangling + would fuck up edge cases)
-  const phonesURL = './assets/temp/phones.csv';
-  const phones = await fetchCSV(phonesURL);
-  console.log('phones:', phones);
+  // const phonesURL = './assets/temp/phones.csv';
+  // const phones = await fetchCSV(phonesURL);
+  // console.log('phones:', phones);
 
-  // initChart(locations);
-  // initMap(locations);
+  initChart(locations);
+  initMap(locations);
   // functionalise data congestion and distrobution to chart/map funcs
 });
 
