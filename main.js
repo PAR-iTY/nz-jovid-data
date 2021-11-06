@@ -327,7 +327,7 @@ const getDate = value => {
 
   // verify input formatting is valid
   // should this catch any mistakes? or is it just a mirror-compare?
-  console.log(value);
+  // console.log(value);
   if (m.format('D/M/YYYY, h:mm a') !== value) {
     console.error('[moment.js date formatting error] input value:', value);
 
