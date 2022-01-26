@@ -120,7 +120,7 @@ const initChart = data => {
     plugins: {
       title: {
         display: true,
-        text: 'NZ Covid-19 August 2021 Event: Locations of interest by city'
+        text: 'NZ Covid-19 Locations of interest by city'
       }
     },
     scales: {
@@ -276,6 +276,7 @@ const fetchJSON = async url => {
     console.error(error);
   }
 };
+
 // ------------------------------------------------------------------- //
 
 const fetchCSV = async url => {
