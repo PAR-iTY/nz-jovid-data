@@ -7,7 +7,7 @@ body {
 }
 
 #cesiumContainer {
-  height: 70vh;
+  height: 60vh;
   /* max-width: 1280px;
   margin: 0 auto; */
 }
@@ -15,7 +15,7 @@ body {
 .chart-container {
   /* container with relative positioning required for {responsive: true} chart option */
   position: relative;
-  height: 30vh;
+  height: 40vh;
   max-width: 1280px;
   margin: 0 auto;
 }

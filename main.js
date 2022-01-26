@@ -83,17 +83,28 @@ const initChart = data => {
   // would then lose advantage of that accObj containing
   // a clean and full reference set of data attributes that
   // i care about in useful formats for chartjs
+
+  // dodgy object sort implementation (unreliable ordering)
   const sigCityData = Object.fromEntries(
-    Object.entries(cityData).filter(([key, value]) => value >= 5)
-    // .sort((a, b) => a - b) // doesnt do anything
+    Object.entries(cityData)
+      // .filter(([key, value]) => value >= 5)
+      .sort(([, a], [, b]) => a - b)
+      .reverse()
   );
+
+  // try a map conversion (fail: chart.js doesn't work with maps)
+  // const sigCityData = new Map(
+  //   Object.entries(cityData)
+  //     .sort(([, a], [, b]) => a - b)
+  //     .reverse()
+  // );
 
   // console.log('sigCityData:', sigCityData);
 
   const chartData = {
     // grouped: true,
     label: 'Locations',
-    data: Object.values(cityData),
+    data: Object.values(sigCityData),
     backgroundColor: [
       'rgba(210, 99, 132, 0.6)',
       'rgba(180, 99, 132, 0.6)',
@@ -120,7 +131,7 @@ const initChart = data => {
     plugins: {
       title: {
         display: true,
-        text: 'NZ Covid-19 Locations of interest by city'
+        text: 'NZ Covid-19 locations of interest by city/town'
       }
     },
     scales: {
@@ -144,7 +155,7 @@ const initChart = data => {
     type: 'bar',
     // grouped: true,
     data: {
-      labels: Object.keys(cityData),
+      labels: Object.keys(sigCityData),
       datasets: [chartData]
     },
     options: chartOptions
