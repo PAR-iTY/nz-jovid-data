@@ -326,15 +326,17 @@ const getDate = value => {
   let m = moment(value, 'D-M-YYYY, h:mm a');
 
   // verify input formatting is valid
-  // should this catch any mistakes? or is it just a mirror-compare?
-  // console.log(value);
-  if (m.format('D/M/YYYY, h:mm a') !== value) {
-    console.error('[moment.js date formatting error] input value:', value);
-
-    return Error('[moment.js date formatting error] input value:', value);
-  } else {
-    return m;
-  }
+  // update: this gets tripped up by M vs MM month values with leading 0's
+  // ie: january rendered as  /01/ vs. /1/ etc
+  // if (m.format('D/M/YYYY, h:mm a') !== value) {
+  //   console.warn(
+  //     '[moment.js date formatting error]:\n',
+  //     value,
+  //     '\n',
+  //     m.format('D/M/YYYY, h:mm a')
+  //   );
+  // }
+  return m;
 };
 
 // ------------------------------------------------------------------- //
