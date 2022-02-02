@@ -1,36 +1,29 @@
 // ------------------------------------------------------------------- //
 
-// before i do any of this add more timer code to console logger
-// so i know what im doing is doing anything at all (sneaky JIT)
-
-/*
- * todo:
- *  - improve reduce accObj so it collects more information per city
- *  - seperate data-cleaning functionality from chart functionality
- *  - and/or develop a new data structure e.g. for time-series line chart
- *  - babel this script for compatability
- *  - improve UX - site title/heading, explain covid-chart & jovid-map
- *  - functionalise data congestion and distrobution to chart/map funcs
- *  - lazy/async load both map and table (Cesium is async by default)
- *  -
- */
-
-// ASYNC
-
-// if the whole project were largely async the perf may increase
-// regardless it enables defer/await/parallel modes of loading
-// which benefits modularity and low-power/connectivity devices
-// note: Cesium calls are often async, and could be managed/optimised
-
-// ...does this mean if instead of doing my work within initMap...
-// i seperate out work into functions and be careful to avoid await
-// i convert my functions to returning promises of data and feed
-// these promises to Cesum / viewer etc calls??
+import { fetchJSON, getDate } from './utils.js';
 
 // ------------------------------------------------------------------- //
 
-// what else to do with the data...
-// i could create a sequence starting from the first recorded location to the last!
+window.addEventListener('DOMContentLoaded', async e => {
+  console.log(
+    `DOMContentLoaded in ${
+      Math.round((e.timeStamp + Number.EPSILON * 100) / 100) / 1000
+    } seconds`
+  );
+
+  // fetch live data
+  const locationsURL =
+    'https://raw.githubusercontent.com/minhealthnz/nz-covid-data/main/locations-of-interest/august-2021/locations-of-interest.geojson';
+
+  // [dev] purely for local conviencience + testing
+  // const locationsURL = './assets/temp/reference-locations.geojson';
+
+  const locations = await fetchJSON(locationsURL);
+
+  initChart(locations);
+  initMap(locations);
+  // functionalise data congestion and distrobution to chart/map funcs
+});
 
 const initChart = data => {
   // use reduce to new object to do data transformation and aggregation in one pass
@@ -51,11 +44,9 @@ const initChart = data => {
         );
       }
 
-      // [HERE] fork off work to other functions if required because:
+      // fork off work to other functions if required because:
       // this is the best place to collect feature props key & value
 
-      // instead of map above,
-      // [rest of code moved to getDate()]
       // add date data to accumulator object
       // accObj[date] = (accObj[date] || 0) + 1;
       // }
@@ -85,19 +76,14 @@ const initChart = data => {
   // i care about in useful formats for chartjs
 
   // dodgy object sort implementation (unreliable ordering)
+  // tried swapping Object.fromEntries() with new Map()
+  // but chart.js works with objects only, not maps
   const sigCityData = Object.fromEntries(
     Object.entries(cityData)
       // .filter(([key, value]) => value >= 5)
       .sort(([, a], [, b]) => a - b)
       .reverse()
   );
-
-  // try a map conversion (fail: chart.js doesn't work with maps)
-  // const sigCityData = new Map(
-  //   Object.entries(cityData)
-  //     .sort(([, a], [, b]) => a - b)
-  //     .reverse()
-  // );
 
   // console.log('sigCityData:', sigCityData);
 
@@ -214,35 +200,6 @@ const initMap = async data => {
   viewer.dataSources.add(jocations);
   viewer.dataSources.add(locations);
 
-  // console.log('locations: ', locations.entities.values);
-
-  // map can't access look-ahead value, sort cant remove values
-  // filter cant return modified values or look ahead
-
-  // use more fancy ES6+
-  const degreesArray = data.features
-    .map(feature => {
-      const { Start, End } = feature.properties;
-      const coords = feature.geometry.coordinates;
-      return { Start, coords };
-      // const [Long, Lat] = feature.geometry.coordinates;
-      // return { Start, End, Lat, Long };
-    })
-    .sort((a, b) => getDate(a.Start).unix() - getDate(b.Start).unix())
-    .flatMap(feature => feature.coords);
-  // .flatMap(feature => [feature.Long, feature.Lat]);
-
-  // console.log('degreesArray:', degreesArray);
-
-  viewer.entities.add({
-    polyline: {
-      positions: Cesium.Cartesian3.fromDegreesArray(degreesArray),
-      width: 4.0,
-      material: Cesium.Color.ORANGE,
-      clampToGround: true
-    }
-  });
-
   viewer.camera.flyTo({
     // nz overview cartesian3
     destination: {
@@ -259,7 +216,7 @@ const initMap = async data => {
     duration: 3.0
   });
 
-  // lazy way of surfacing current POV positions to feed to flyTo
+  // [dev] way to surface current POV positions to update flyTo
   // setInterval(() => {
   //   console.dir(viewer.scene.camera.position);
   // }, 3000);
@@ -273,154 +230,3 @@ const initMap = async data => {
 };
 
 // ------------------------------------------------------------------- //
-
-// async does not encapsulate promise --> call using await
-// does awaiting res.methods() do anything? is there any way to fully
-// encapsulate async within fetch functions
-// (i.e. not have to await the fetch function call in parent scope too)
-const fetchJSON = async url => {
-  try {
-    const res = await fetch(url);
-    const json = await res.json();
-    return json;
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-// ------------------------------------------------------------------- //
-
-const fetchCSV = async url => {
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'content-type': 'text/csv;charset=UTF-8'
-      }
-    });
-    const text = await res.text();
-    return text;
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-// ------------------------------------------------------------------- //
-
-// uses bitwise operation to determine if int is odd or not
-const isOdd = n =>
-  n && n === parseInt(n, 10)
-    ? n & 1
-      ? true
-      : false
-    : Error('input value must be a non-zero integer');
-
-// ------------------------------------------------------------------- //
-
-const diff = (a, b) => (a > b ? a - b : b - a);
-
-// ------------------------------------------------------------------- //
-
-// generic attribute-dropper for array of objects (API, JSON-type data)
-// challenge: how to predict number of dropped attributes (args/.length?)
-// and how to replicate that into the map params...
-const dropAttrs = objArray =>
-  objArray.map(({ dropAttr1, dropAttr2, ...keepAttrs }) => keepAttrs);
-
-// ------------------------------------------------------------------- //
-
-// expects a string input value in NZ 12 hour format
-// known format (for now) but could parameterise
-// return moment object for versatility
-const getDate = value => {
-  // convert to MM/DD/YYYY format for new Date(input)
-  // use strict mode is rendering invalid dates... turned off for now
-  // is it being tripped by missing locale/zone info?
-  let m = moment(value, 'D-M-YYYY, h:mm a');
-
-  // verify input formatting is valid
-  // update: this gets tripped up by M vs MM month values with leading 0's
-  // ie: january rendered as  /01/ vs. /1/ etc
-  // if (m.format('D/M/YYYY, h:mm a') !== value) {
-  //   console.warn(
-  //     '[moment.js date formatting error]:\n',
-  //     value,
-  //     '\n',
-  //     m.format('D/M/YYYY, h:mm a')
-  //   );
-  // }
-  return m;
-};
-
-// ------------------------------------------------------------------- //
-
-window.addEventListener('DOMContentLoaded', async e => {
-  console.log(
-    `DOMContentLoaded in ${
-      Math.round((e.timeStamp + Number.EPSILON * 100) / 100) / 1000
-    } seconds`
-  );
-
-  // fetch live data
-  const locationsURL =
-    'https://raw.githubusercontent.com/minhealthnz/nz-covid-data/main/locations-of-interest/august-2021/locations-of-interest.geojson';
-
-  // [dev] purely for local conviencience and i guess less api hits + speed
-  // const locationsURL = './assets/temp/reference-locations.geojson';
-
-  const locations = await fetchJSON(locationsURL);
-
-  // phone csv data test
-  // apparently chart.js plugin might be the way to go
-  // or some other csv parser
-  // (cbf with string-wrangling + would fuck up edge cases)
-  // const phonesURL = './assets/temp/phones.csv';
-  // const phones = await fetchCSV(phonesURL);
-  // console.log('phones:', phones);
-
-  initChart(locations);
-  initMap(locations);
-  // functionalise data congestion and distrobution to chart/map funcs
-});
-
-// ------------------------------------------------------------------- //
-// ------------------------------------------------------------------- //
-// ------------------------------------------------------------------- //
-
-// const x = degreesArray.reduce((accObj, feature) => {
-// accObj. = (accObj.latDiff || feature);
-// accObj.longDiff = (accObj.longDiff || feature);
-
-// if (isOdd(index)) {
-//   // latitudes
-//   if (index >= 2) {
-//     // can compare back 2 places
-//     if (diff(value, array[index - 2]) > 0.3) {
-//       console.log('lat diff:', diff(value, array[index - 2]));
-//     }
-//   }
-// } else {
-//   // longitudes
-// }
-// }, {});
-
-// console.log('x: ', x);
-
-// ^ needs to be more complex to link the trail of locations
-// must detect: first starting location's end time
-//              next starting location's start time
-
-// so this needs to do a look-ahead?
-
-// i can make a crude assumption: it matters less what the end time is
-// because the data shows when (someone) was at a location, and i will
-// show the relationship between that contagious event and the next.
-
-// because this data does not identify citizens (thank Wanye @ Stats)
-// i should not pretend that the sequence is linear.
-// every start time event should be linked with a line to every soon
-// after event (give a param of 3 hours [or a day, depends on data])
-
-// strongest lines should be ranked by a few criteria:
-// how close geographically they are
-// how closely in start times they are
-// how close the firsts end time is to the nexts start time
