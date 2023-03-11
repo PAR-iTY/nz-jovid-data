@@ -11,12 +11,12 @@ window.addEventListener('DOMContentLoaded', async e => {
     } seconds`
   );
 
-  // fetch live data
-  const locationsURL =
-    'https://raw.githubusercontent.com/minhealthnz/nz-covid-data/main/locations-of-interest/august-2021/locations-of-interest.geojson';
+  // fetch live data (disabled due to data source change)
+  // const locationsURL =
+  //   'https://raw.githubusercontent.com/minhealthnz/nz-covid-data/main/locations-of-interest/august-2021/locations-of-interest.geojson';
 
   // [dev] purely for local conviencience + testing
-  // const locationsURL = './assets/temp/reference-locations.geojson';
+  const locationsURL = './assets/geojson/reference-locations.geojson';
 
   const locations = await fetchJSON(locationsURL);
 

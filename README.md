@@ -1,3 +1,5 @@
+> live data feed has stopped - presented data is from ~ January 2022
+
 # nz-jovid-data
 
 https://par-ity.github.io/nz-jovid-data/
