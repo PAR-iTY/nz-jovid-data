@@ -3,11 +3,12 @@
 // expects a string input value in NZ 12 hour format
 // known format (for now) but could parameterise
 // return moment object for versatility
-const getDate = value => {
-  // convert to MM/DD/YYYY format for new Date(input)
-  let m = moment(value, 'D-M-YYYY, h:mm a');
-  return m;
-};
+
+// const getDate = value => {
+// convert to MM/DD/YYYY format for new Date(input)
+//   let m = moment(value, 'D-M-YYYY, h:mm a');
+//   return m;
+// };
 
 // update: this gets tripped up by M vs MM month values with leading 0's
 // verify input formatting is valid
@@ -77,6 +78,6 @@ const dropAttrs = objArray =>
 
 // ------------------------------------------------------------------- //
 
-export { fetchJSON, getDate };
+export { fetchJSON };
 
 // ------------------------------------------------------------------- //
